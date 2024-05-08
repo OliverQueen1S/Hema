@@ -7,7 +7,7 @@ my $users = $ARGV[1];
 my $passwords = $ARGV[2];
 my $save2 = "user_and_pass.txt";
 my $save = "user_only.txt";
-my $max_processes = "10";
+my $max_processes = "1";
 #wwwadmin
 open( USERS,  "<$users") || die " Cannot open the  word file : $users ! \n";
         chomp(@userlist = <USERS>);
@@ -19,10 +19,10 @@ close(PASS);
 my @foundip;
 
 
-my $i = 0;
+my $i = 1;
 
 
-my $forkmanager = new Parallel::ForkManager->new("500");
+my $forkmanager = Parallel::ForkManager->new("1");
 
 $forkmanager->run_on_finish(sub {    # must be declared before first 'start'
     my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data) = @_;
